@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# Reopen the Pi conversations that ran in Rex blocks before the server stopped.
+# Rex restores sessions, tabs, and block IDs but not their programs; the
+# pi-rex extension records each block's conversation under $state/<block>.
+set -euo pipefail
+
+state="${XDG_STATE_HOME:-$HOME/.local/state}/pi-rex"
+mkdir -p "$state"
+# Rex discards the output of its init commands; keep a log.
+exec 2>>"$state/log"
+
+note() { printf '%s\n' "$*" >&2; }
+
+if ! command -v rex >/dev/null; then
+  PATH="$PATH:/Applications/Rex Beta.app/Contents/Helpers/Rex Server.rex/Contents/MacOS"
+fi
+# Never start a server of our own.
+rex() { command rex --autostart=false "$@"; }
+
+epoch() {
+  date -u -d "$1" +%s 2>/dev/null || date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$1" +%s
+}
+
+# Rex runs init as the server starts; wait until it answers.
+status=
+for _ in $(seq 60); do
+  status=$(rex server status 2>/dev/null) && break
+  sleep 1
+done
+[ -n "$status" ] || exit 0
+instance=$(awk '$1 == "instance:" { print $2 }' <<<"$status")
+started=$(awk '$1 == "started:" { print $2 }' <<<"$status")
+
+# A config reload runs init again; only a freshly started server has lost its
+# programs, and only once.
+age=$(($(date +%s) - $(epoch "$started")))
+[ "$age" -le "${PI_REX_MAX_AGE:-120}" ] || exit 0
+[ "$(cat "$state/instance" 2>/dev/null)" = "$instance" ] && exit 0
+
+# Wait for Rex to restore its sessions. Block targets resolve within a session,
+# so map each block to its own. A failure here must not look like "no blocks".
+sessions=
+for _ in $(seq 30); do
+  sessions=$(rex session ls --quiet --short=false)
+  [ -n "$sessions" ] && break
+  sleep 1
+done
+[ -n "$sessions" ] || exit 0
+map=
+for session in $sessions; do
+  blocks=$(rex block ls -s "$session" --quiet --short=false)
+  for block in $blocks; do
+    map="$map$block $session"$'\n'
+  done
+done
+echo "$instance" >"$state/instance"
+
+for file in "$state"/block:*; do
+  [ -f "$file" ] || continue
+  block=$(basename "$file")
+  id=$(cat "$file")
+  session=$(awk -v block="$block" '$1 == block { print $2 }' <<<"$map")
+  if [ -z "$session" ]; then
+    rm -f "$file"
+  elif ! [[ $id =~ ^[0-9a-f-]+$ ]]; then
+    note "dropped malformed record for $block"
+    rm -f "$file"
+  elif rex send -s "$session" -b "$block" "pi --session $id"$'\r'; then
+    note "resumed $block with pi session $id"
+  else
+    note "failed to resume $block"
+  fi
+done

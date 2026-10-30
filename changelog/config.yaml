@@ -1,0 +1,4 @@
+id: pi-rex
+name: Pi Rex
+description: Reopens Pi conversations in Rex terminal blocks after the server restarts.
+repository: mavam/pi-rex
