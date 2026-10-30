@@ -1,6 +1,6 @@
 {
   "name": "pi-rex",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Reopen Pi conversations in Rex terminal blocks after the server restarts",
   "type": "module",
   "files": [
