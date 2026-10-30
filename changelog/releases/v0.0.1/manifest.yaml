@@ -1,0 +1,7 @@
+created: 2026-10-30
+title: "Hello, Rex! \U0001F996"
+intro: >-
+  Pi Rex lands on npm, the first step towards reopening your Pi conversations in Rex
+  after every restart.
+source:
+  mode: sync-stable-queue
