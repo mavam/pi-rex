@@ -1,0 +1,7 @@
+created: 2026-10-30
+title: Reopen Pi conversations after Rex restarts
+intro: >-
+  Pi Rex reopens your Pi conversations in Rex terminal blocks after the server restarts.
+source:
+  mode: sync-stable-queue
+  previous_stable: v0.0.1
