@@ -25,8 +25,7 @@ local state = os.getenv("XDG_STATE_HOME") or os.getenv("HOME") .. "/.local/state
 rex.exec.start({ "bash", state .. "/pi-rex/rex-resume" }, { detach = true })
 ```
 
-Rex runs it at its next server start; reloading the configuration doesn't resume
-anything.
+Rex runs it whenever its server starts.
 
 From then on, each Pi in a Rex block records its conversation after its first
 reply. When the server restarts, a few seconds after Rex brings the blocks back,
@@ -46,8 +45,9 @@ What doesn't:
 - Other programs; they come back as a plain shell.
 
 pi-rex only acts on a server that started within the last two minutes, and once
-per server instance. Reloading Rex's configuration later never types into a
-running Pi.
+per server instance. Reloading Rex's configuration in that window runs the
+script too and types into the Pi running in each recorded block, so wait a few
+minutes after a restart before reloading.
 
 ## 🧰 Requirements
 
