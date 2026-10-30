@@ -63,15 +63,3 @@ it, one file per block.
 
 If a conversation didn't come back, check that the block had a reply before the
 restart: `ls ~/.local/state/pi-rex`.
-
-## 🧹 Uninstall
-
-```sh
-pi remove npm:pi-rex
-```
-
-Then remove the line from Rex's `init.lua`.
-
-## 📄 License
-
-[MIT](LICENSE)
