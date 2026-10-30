@@ -4,31 +4,29 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-const script = fileURLToPath(new URL("../bin/rex-resume", import.meta.url));
+const bin = fileURLToPath(new URL("../bin/", import.meta.url));
+const scripts = ["rex-resume", "rex-resume.lua"];
 
-/** Where records live, one file per Rex block holding its Pi session ID. */
+/** Where records live, one file per Rex block with its Pi session ID and directory. */
 export function stateDir(env: NodeJS.ProcessEnv = process.env): string {
   return join(env.XDG_STATE_HOME || join(homedir(), ".local", "state"), "pi-rex");
 }
 
-/** Where the resume script lives, at a path that survives package updates. */
-export function installedScript(env: NodeJS.ProcessEnv = process.env): string {
-  return join(stateDir(env), "rex-resume");
-}
-
-/** Copy the script from the package to its stable path unless it's current. */
+/** Copy the scripts from the package to their stable paths unless current. */
 function install() {
-  try {
-    const source = readFileSync(script);
-    const target = installedScript();
-    if (existsSync(target) && readFileSync(target).equals(source)) return;
-    mkdirSync(stateDir(), { recursive: true, mode: 0o700 });
-    const tmp = `${target}.${process.pid}`;
-    writeFileSync(tmp, source, { mode: 0o755 });
-    chmodSync(tmp, 0o755);
-    renameSync(tmp, target);
-  } catch {
-    // Installing must never disturb the session.
+  for (const name of scripts) {
+    try {
+      const source = readFileSync(join(bin, name));
+      const target = join(stateDir(), name);
+      if (existsSync(target) && readFileSync(target).equals(source)) continue;
+      mkdirSync(stateDir(), { recursive: true, mode: 0o700 });
+      const tmp = `${target}.${process.pid}`;
+      writeFileSync(tmp, source, { mode: 0o755 });
+      chmodSync(tmp, 0o755);
+      renameSync(tmp, target);
+    } catch {
+      // Installing must never disturb the session.
+    }
   }
 }
 
@@ -51,7 +49,7 @@ export default function (pi: ExtensionAPI) {
       if (!session || !existsSync(session)) return;
       mkdirSync(dir, { recursive: true, mode: 0o700 });
       const tmp = join(dir, `.${block}.${process.pid}`);
-      writeFileSync(tmp, `${ctx.sessionManager.getSessionId()}\n`);
+      writeFileSync(tmp, `${ctx.sessionManager.getSessionId()}\n${ctx.sessionManager.getCwd()}\n`);
       renameSync(tmp, file);
     } catch {
       // Recording must never disturb the session.

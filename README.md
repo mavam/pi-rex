@@ -16,8 +16,8 @@ pi install npm:pi-rex
 
 ## ✨ Usage
 
-The extension installs the resume script at `~/.local/state/pi-rex/rex-resume`
-the first time Pi starts, and keeps it current after updates. Add these lines to
+The extension installs its resume scripts under `~/.local/state/pi-rex` the
+first time Pi starts, and keeps them current after updates. Add these lines to
 Rex's `init.lua` so Rex runs it when its server starts:
 
 ```lua
@@ -28,9 +28,14 @@ rex.exec.start({ "bash", state .. "/pi-rex/rex-resume" }, { detach = true })
 Rex runs it whenever its server starts.
 
 From then on, each Pi in a Rex block records its conversation after its first
-reply. When the server restarts, a few seconds after Rex brings the blocks back,
-pi-rex types `pi --session <id>` into every block that had a recorded
-conversation. You pick up where you left off, in the same block and directory.
+reply. When the server restarts and Rex brings the blocks back, pi-rex types
+`pi --session <id>` into every block that had a recorded conversation. You pick
+up where you left off, in the same block and directory.
+
+pi-rex waits until each block's shell sits at its prompt before typing, so a
+slow shell startup, such as entering a devenv or direnv environment, doesn't
+swallow the command. If Pi had moved its conversation to another directory,
+such as a worktree, pi-rex changes there first.
 
 What gets resumed:
 
@@ -45,16 +50,15 @@ What doesn't:
 - Other programs; they come back as a plain shell.
 
 pi-rex only acts on a server that started within the last two minutes, and once
-per server instance. Reloading Rex's configuration in that window runs the
-script too and types into the Pi running in each recorded block, so wait a few
-minutes after a restart before reloading.
+per server instance. It never types into a block where Pi or another program
+already runs.
 
 ## 🧰 Requirements
 
 - Rex for macOS, version 0.1.0-preview.23 or later, which restores sessions
   across server restarts.
-- `bash`, `awk`, and the `rex` CLI. The script finds the CLI inside the
-  installed Rex app if it isn't on `PATH`.
+- `bash` and the `rex` CLI. The script finds the CLI inside the installed Rex
+  app if it isn't on `PATH`.
 
 ## 🩺 Troubleshooting
 

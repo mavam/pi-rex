@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import extension, { installedScript, stateDir } from "../src/index.ts";
+import extension, { stateDir } from "../src/index.ts";
 
 type Handler = (event: unknown, ctx: unknown) => unknown;
 
@@ -16,6 +16,7 @@ const ctx = {
   sessionManager: {
     getSessionFile: () => sessionFile,
     getSessionId: () => "01a18979-333d",
+    getCwd: () => "/work/tree",
   },
 };
 const record = join(stateDir(), "block:abc");
@@ -32,7 +33,7 @@ test("waits for the session file before recording", async () => {
   assert.equal(existsSync(record), false);
   writeFileSync(sessionFile, "");
   await handlers.get("agent_end")!({}, ctx);
-  assert.equal(readFileSync(record, "utf8"), "01a18979-333d\n");
+  assert.equal(readFileSync(record, "utf8"), "01a18979-333d\n/work/tree\n");
 });
 
 test("keeps the record across reloads and conversation switches", async () => {
@@ -68,19 +69,20 @@ test("keeps the record when the terminal hangs up", async () => {
   assert.equal(existsSync(record), true);
 });
 
-test("installs the resume script at a stable path", async () => {
+test("installs the resume scripts at a stable path", async () => {
   const { handlers } = load();
-  const source = new URL("../bin/rex-resume", import.meta.url).pathname;
   await handlers.get("session_start")!({}, ctx);
-  const target = installedScript();
-  assert.equal(readFileSync(target, "utf8"), readFileSync(source, "utf8"));
-  assert.ok(statSync(target).mode & 0o100, "executable");
+  for (const name of ["rex-resume", "rex-resume.lua"]) {
+    const source = new URL(`../bin/${name}`, import.meta.url).pathname;
+    const target = join(stateDir(), name);
+    assert.equal(readFileSync(target, "utf8"), readFileSync(source, "utf8"));
+    assert.ok(statSync(target).mode & 0o100, "executable");
 
-  // An outdated copy, as left by an earlier version, is replaced.
-  writeFileSync(target, "old");
-  await handlers.get("session_start")!({}, ctx);
-  assert.equal(readFileSync(target, "utf8"), readFileSync(source, "utf8"));
-  chmodSync(target, 0o755);
+    // An outdated copy, as left by an earlier version, is replaced.
+    writeFileSync(target, "old");
+    await handlers.get("session_start")!({}, ctx);
+    assert.equal(readFileSync(target, "utf8"), readFileSync(source, "utf8"));
+  }
 });
 
 test("installs the script but records nothing outside Rex", async () => {
@@ -90,5 +92,5 @@ test("installs the script but records nothing outside Rex", async () => {
   assert.deepEqual([...handlers.keys()], ["session_start"]);
   await handlers.get("session_start")!({}, ctx);
   assert.equal(existsSync(record), false);
-  assert.equal(existsSync(installedScript()), true);
+  assert.equal(existsSync(join(stateDir(), "rex-resume.lua")), true);
 });

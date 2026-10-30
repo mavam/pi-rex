@@ -19,8 +19,11 @@ manually.
 
 - Keep `README.md` in sync with user-facing behavior, the init snippet, and
   requirements.
-- `bin/rex-resume` must run under macOS's bash 3.2 and BSD `date`: no
-  associative arrays, no GNU-only options without a fallback.
+- `bin/rex-resume` must run under macOS's bash 3.2. It only waits for the
+  server; the resume logic lives in `bin/rex-resume.lua`, which Rex runs with
+  Lua 5.1 through `rex do`.
+- The tests run the Lua script against a fake Rex and need `luajit` (or another
+  Lua interpreter) on `PATH`.
 
 ## Release engineering
 
